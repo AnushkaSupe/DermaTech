@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skin Issue Detection</title>
+    <style>
+        #video {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <h1>Skin Issue Detection</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="capture">Capture</button>
+    <canvas id="canvas" width="640" height="480" style="display: none;"></canvas>
+    <button id="upload">Upload</button>
+    <div id="result"></div>
+
+    <script>
+        // Access webcam
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const resultDiv = document.getElementById('result');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error('Error accessing webcam: ' + err);
+            });
+
+        // Capture image from video
+        document.getElementById('capture').addEventListener('click', () => {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        });
+
+        // Upload captured image to server
+        document.getElementById('upload').addEventListener('click', () => {
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('image', blob, 'captured_image.jpg');
+
+                fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.skin_issue) {
+                        resultDiv.innerHTML = `Detected Skin Issue: ${data.skin_issue}`;
+                    } else {
+                        resultDiv.innerHTML = `Error: ${data.error}`;
+                    }
+                })
+                .catch(err => {
+                    console.error('Error uploading image: ' + err);
+                    resultDiv.innerHTML = 'Error uploading image.';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
